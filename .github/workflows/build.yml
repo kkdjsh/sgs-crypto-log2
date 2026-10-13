@@ -2,7 +2,16 @@ name: Build
 on: [push]
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      - run: echo hello && uname -a
+      - name: Install Theos
+        run: |
+          sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
+          sudo xcode-select -s /Applications/Xcode_15.4.app || true
+      - name: Build
+        run: make package THEOS=/opt/theos FINAL=yes
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TweakOutput
+          path: packages/*.deb
