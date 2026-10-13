@@ -1,7 +1,7 @@
-Package: sgs-crypto-log
+Package: com.lab.sgscryptolog
 Name: sgs-crypto-log
 Version: 1.0
-Architecture: arm64
+Architecture: iphoneos-arm64
 Description: Hook CCCrypt/send/recv for sgs lab
 Maintainer: lab
 Author: lab
