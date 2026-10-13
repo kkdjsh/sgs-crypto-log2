@@ -1,12 +1,16 @@
 #import <Foundation/Foundation.h>
-#import <substrate.h>
 #import <CommonCrypto/CommonCrypto.h>
 #import <sys/socket.h>
 #import <unistd.h>
+#import <mach-o/dyld.h>
 
 static FILE *sgs_logfp = NULL;
 static void L(NSString *fmt, ...) {
-    if (!sgs_logfp) sgs_logfp = fopen("/tmp/sgs_crypto.log", "a");
+    if (!sgs_logfp) {
+        NSString *docs = [NSHomeDirectory() stringByAppendingPathComponent:@"Documents"];
+        NSString *path = [docs stringByAppendingPathComponent:@"sgs_crypto.log"];
+        sgs_logfp = fopen([path UTF8String], "a");
+    }
     if (!sgs_logfp) return;
     va_list ap; va_start(ap, fmt);
     NSString *s = [[NSString alloc] initWithFormat:fmt arguments:ap];
@@ -25,6 +29,15 @@ static NSString *H(const void *p, size_t n) {
     return s;
 }
 
+// ---- fishhook 鑷繁瀹炵幇锛堜笉渚濊禆澶栭儴 fishhook.h锛?----
+struct rebinding {
+    const char *name;
+    void *replacement;
+    void **replaced;
+};
+extern int rebind_symbols(struct rebinding rebindings[], size_t rebindings_nel);
+
+// ---- hook 鍑芥暟 ----
 static CCCryptorStatus (*origCCCrypt)(CCOperation, CCAlgorithm, CCOptions,
     const void*, size_t, const void*, const void*, size_t, void*, size_t, size_t*) = NULL;
 static CCCryptorStatus hookCCCrypt(CCOperation op, CCAlgorithm alg, CCOptions opt,
@@ -58,10 +71,13 @@ static ssize_t hookRecv(int s, void *buf, size_t len, int fl) {
     return r;
 }
 
-%ctor {
+__attribute__((constructor)) static void init(void) {
     L(@"=== sgs_crypto_log loaded ===");
-    MSHookFunction((void*)CCCrypt, (void*)hookCCCrypt, (void**)&origCCCrypt);
-    MSHookFunction((void*)send,    (void*)hookSend,    (void**)&origSend);
-    MSHookFunction((void*)recv,    (void*)hookRecv,    (void**)&origRecv);
+    L(@"bundle=%@", [[NSBundle mainBundle] bundleIdentifier]);
+    struct rebinding r1 = {"CCCrypt", (void*)hookCCCrypt, (void**)&origCCCrypt};
+    struct rebinding r2 = {"send",    (void*)hookSend,    (void**)&origSend};
+    struct rebinding r3 = {"recv",    (void*)hookRecv,    (void**)&origRecv};
+    struct rebinding rs[] = {r1, r2, r3};
+    rebind_symbols(rs, 3);
     L(@"[+] hooks installed");
 }
