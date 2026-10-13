@@ -4,13 +4,14 @@
 #import <sys/socket.h>
 #import <unistd.h>
 
-static FILE *logf = NULL;
+static FILE *sgs_logfp = NULL;
 static void L(NSString *fmt, ...) {
-    if (!logf) logf = fopen("/tmp/sgs_crypto.log", "a");
-    if (!logf) return;
+    if (!sgs_logfp) sgs_logfp = fopen("/tmp/sgs_crypto.log", "a");
+    if (!sgs_logfp) return;
     va_list ap; va_start(ap, fmt);
     NSString *s = [[NSString alloc] initWithFormat:fmt arguments:ap];
-    fprintf(logf, "%s\n", [s UTF8String]); fflush(logf);
+    fprintf(sgs_logfp, "%s\n", [s UTF8String]);
+    fflush(sgs_logfp);
     va_end(ap);
 }
 
