@@ -29,8 +29,21 @@ static NSString *H(const void *p, size_t n) {
     return s;
 }
 
-static CCCryptorStatus (*origCCCrypt)(CCOperation, CCAlgorithm, CCOptions,
+typedef CCCryptorStatus (*CCCrypt_t)(CCOperation, CCAlgorithm, CCOptions,
     const void*, size_t, const void*, const void*, size_t, void*, size_t, size_t*);
+typedef ssize_t (*send_t)(int, const void*, size_t, int);
+typedef ssize_t (*recv_t)(int, void*, size_t, int);
+typedef ssize_t (*sendto_t)(int, const void*, size_t, int, const struct sockaddr*, socklen_t);
+typedef ssize_t (*write_t)(int, const void*, size_t);
+typedef ssize_t (*read_t)(int, void*, size_t);
+
+static CCCrypt_t origCCCrypt = NULL;
+static send_t origSend = NULL;
+static recv_t origRecv = NULL;
+static sendto_t origSendto = NULL;
+static write_t origWrite = NULL;
+static read_t origRead = NULL;
+
 static CCCryptorStatus hookCCCrypt(CCOperation op, CCAlgorithm alg, CCOptions opt,
     const void *key, size_t klen, const void *iv,
     const void *in, size_t inlen, void *out, size_t outavail, size_t *outlen) {
@@ -42,29 +55,23 @@ static CCCryptorStatus hookCCCrypt(CCOperation op, CCAlgorithm alg, CCOptions op
     if (outlen) L(@"  OUT:%@", H(out, *outlen > 128 ? 128 : *outlen));
     return r;
 }
-
-// 鍏ㄩ噺璁板綍鎵€鏈?socket 鍐?static ssize_t (*origSend)(int, const void*, size_t, int);
 static ssize_t hookSend(int s, const void *buf, size_t len, int fl) {
     if (len > 20 && len < 8192) L(@"[send] s=%d len=%zu: %@", s, len, H(buf, len>300?300:len));
     return origSend(s, buf, len, fl);
 }
-static ssize_t (*origRecv)(int, void*, size_t, int);
 static ssize_t hookRecv(int s, void *buf, size_t len, int fl) {
     ssize_t r = origRecv(s, buf, len, fl);
     if (r > 20 && r < 8192) L(@"[recv] s=%d len=%zd: %@", s, r, H(buf, r>300?300:r));
     return r;
 }
-static ssize_t (*origSendto)(int, const void*, size_t, int, const struct sockaddr*, socklen_t);
-static ssize_t hookSendto(int s, const void *buf, size_t len, int fl, const struct sockaddr *to, socklen_t tolen) {
+static ssize_t hookSendto(int s, const void *buf, size_t len, int fl, const struct sockaddr *to, socklen_t tl) {
     if (len > 20 && len < 8192) L(@"[sendto] s=%d len=%zu: %@", s, len, H(buf, len>300?300:len));
-    return origSendto(s, buf, len, fl, to, tolen);
+    return origSendto(s, buf, len, fl, to, tl);
 }
-static ssize_t (*origWrite)(int, const void*, size_t);
 static ssize_t hookWrite(int fd, const void *buf, size_t len) {
     if (len > 20 && len < 8192) L(@"[write] fd=%d len=%zu: %@", fd, len, H(buf, len>300?300:len));
     return origWrite(fd, buf, len);
 }
-static ssize_t (*origRead)(int, void*, size_t);
 static ssize_t hookRead(int fd, void *buf, size_t len) {
     ssize_t r = origRead(fd, buf, len);
     if (r > 20 && r < 8192) L(@"[read] fd=%d len=%zd: %@", fd, r, H(buf, r>300?300:r));
