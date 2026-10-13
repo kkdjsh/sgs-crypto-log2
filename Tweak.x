@@ -3,7 +3,6 @@
 #import <CommonCrypto/CommonCrypto.h>
 #import <sys/socket.h>
 #import <unistd.h>
-#import <fishhook.h>
 
 static FILE *logf = NULL;
 static void L(NSString *fmt, ...) {
@@ -58,12 +57,10 @@ static ssize_t hookRecv(int s, void *buf, size_t len, int fl) {
     return r;
 }
 
-__attribute__((constructor)) static void init(void) {
+%ctor {
     L(@"=== sgs_crypto_log loaded ===");
-    struct rebinding r1 = {"CCCrypt", hookCCCrypt, (void**)&origCCCrypt};
-    struct rebinding r2 = {"send", hookSend, (void**)&origSend};
-    struct rebinding r3 = {"recv", hookRecv, (void**)&origRecv};
-    struct rebinding rs[] = {r1, r2, r3};
-    rebind_symbols(rs, 3);
+    MSHookFunction((void*)CCCrypt, (void*)hookCCCrypt, (void**)&origCCCrypt);
+    MSHookFunction((void*)send,    (void*)hookSend,    (void**)&origSend);
+    MSHookFunction((void*)recv,    (void*)hookRecv,    (void**)&origRecv);
     L(@"[+] hooks installed");
 }
