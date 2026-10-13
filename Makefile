@@ -1,7 +1,7 @@
 THEOS_PACKAGE_SCHEME = rootless
 export THEOS=/opt/theos
 
-TARGET := iphone:clang:15.0:14.0
+TARGET := iphone:clang::14.0
 ARCHS = arm64 arm64e
 INSTALL_TARGET_PROCESSES = sanguosha_IOS
 
