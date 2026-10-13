@@ -1,0 +1,5 @@
+ipa/
+work/
+*.bin
+*.py
+*.txt
