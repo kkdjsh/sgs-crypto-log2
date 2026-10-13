@@ -1,0 +1,22 @@
+name: build-tweak
+on: [push]
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Theos
+        run: |
+          brew install ldid
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          git clone https://github.com/apple/swift-log.git /tmp/swift-log || true
+      - name: Build
+        env:
+          THEOS: ${{ github.workspace }}/theos
+        run: |
+          cd ${{ github.workspace }}
+          make package FINAL=yes
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          path: packages/*.deb
